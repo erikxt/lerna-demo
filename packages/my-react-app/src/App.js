@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button, Modal, List, PageHeader, Popconfirm, message, notification } from 'antd';
 import './App.less';
 var data = Array.from(require('./data.json'))
@@ -127,7 +127,7 @@ class App extends React.Component {
                   <span>
                     {item.name}
                   </span>
-                  <DeleteArea
+                  <DeleteBotton
                     id={item.id}
                     onClicked={this.deleteCountAndRefresh.bind(this)}
                   />
@@ -147,7 +147,7 @@ class DeleteArea extends React.Component {
     super(props);
     this.state = {
       isPreConfirmModalVisible: false,
-      visible: false
+      isPopConfirmVisible: false
     }
   }
 
@@ -164,12 +164,12 @@ class DeleteArea extends React.Component {
     // console.log(data);
     this.props.onClicked();
     message.success("delete " + this.props.id);
-    this.setState({visible : false})
+    this.setState({isPopConfirmVisible : false})
     resolve();
   });
 
   cancel = () => {
-    this.setState({ visible: false });
+    this.setState({ isPopConfirmVisible: false });
   };
 
   deleteClick = () => {
@@ -181,7 +181,7 @@ class DeleteArea extends React.Component {
   };
 
   handlePreOk = () => {
-    this.setState({ isPreConfirmModalVisible: false, visible: true });
+    this.setState({ isPreConfirmModalVisible: false, isPopConfirmVisible: true });
   };
 
   handlePreCancel = () => {
@@ -201,7 +201,7 @@ class DeleteArea extends React.Component {
         </div>
         <Popconfirm
           title={"Are you sure to delete this task ? id =" + this.props.id}
-          visible={this.state.visible}
+          visible={this.state.isPopConfirmVisible}
           // onVisibleChange={this.handleVisibleChange}
           onConfirm={this.confirm}
           onCancel={this.cancel}
@@ -212,6 +212,73 @@ class DeleteArea extends React.Component {
       </div >
     )
   }
+}
+
+function DeleteBotton(props) {
+
+  const [isPreConfirmModalVisible, setPreConfirmModalVisible] = useState(false);
+  const [isPopConfirmVisible, setPopConfirmVisible] = useState(false);
+
+  let showPreModal = () => {
+    setPreConfirmModalVisible(true);
+  };
+
+  let handlePreOk = () => {
+    setPreConfirmModalVisible(false);
+    setPopConfirmVisible(true);
+  };
+
+  let handlePreCancel = () => {
+    setPreConfirmModalVisible(false);
+  };
+
+  const confirm = () => new Promise(resolve => {
+    // setTimeout(() => { resolve() }, 1000);
+    for (let i = 0; i < data.length; i++) {
+      let obj = data[i];
+      // console.log(obj, props.id)
+      if (obj.id === props.id) {
+        console.log("hit", obj.id)
+        data.splice(i, 1);
+      }
+    }
+    // console.log(data);
+    props.onClicked();
+    message.success("delete " + props.id);
+    setPopConfirmVisible(false);
+    resolve();
+  });
+
+  let cancel = () => {
+    setPopConfirmVisible(false);
+  };
+
+  let deleteClick = () => {
+    showPreModal();
+  }
+
+  return (
+    < div >
+      <div className='preConfirm'>
+        <Modal title="preConfirm"
+          visible={isPreConfirmModalVisible}
+          onOk={handlePreOk}
+          onCancel={handlePreCancel}>
+          <p>preConfirm?</p>
+        </Modal>
+      </div>
+      <Popconfirm
+        title={"Are you sure to delete this task ? id =" + props.id}
+        visible={isPopConfirmVisible}
+        // onVisibleChange={this.handleVisibleChange}
+        onConfirm={confirm}
+        onCancel={cancel}
+        okText="Yes"
+      >
+        <Button type='text' value={props.id} onClick={deleteClick}>delete</Button>
+      </Popconfirm>
+    </div >
+  )
 }
 
 export default App;
