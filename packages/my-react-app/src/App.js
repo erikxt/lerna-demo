@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Modal, List, PageHeader, Popconfirm, message } from 'antd';
+import { Button, Modal, List, PageHeader, Popconfirm, message, notification } from 'antd';
 import './App.less';
 var data = Array.from(require('./data.json'))
 
@@ -41,7 +41,7 @@ class App extends React.Component {
     this.setState({ isModalVisible: false });
   };
 
-  onShowSizeChange(current, pageSize) {
+  onShowSizeChange = (current, pageSize) => {
     this.setState({ current: current, pageSize: pageSize, lists: this.getPage(current, pageSize) });
   }
 
@@ -54,12 +54,39 @@ class App extends React.Component {
   }
 
   deleteCountAndRefresh = () => {
-    let current = this.state.current;
-    let pageSize = this.state.pageSize;
     let count = this.state.totalCount;
-    this.setState({ current: current, pageSize: pageSize, totalCount: count - 1, lists: this.getPage(current, pageSize)});
+    let pageSize = this.state.pageSize;
+    let current = this.state.current;
+    let newCount = count - 1;
+    if (newCount % pageSize === 0 && current > 1) {
+      current -= 1;
+    }
+    this.setState({ current: current, pageSize: pageSize, totalCount: newCount, lists: this.getPage(current, pageSize) });
     this.showTotal();
   }
+
+  closeNotification = () => {
+    console.log(
+      'Notification was closed. Either the close button was clicked or duration time elapsed.',
+    );
+  };
+
+  openNotification = () => {
+    const key = `open${Date.now()}`;
+    const btn = (
+      <Button type="primary" size="small" onClick={() => notification.close(key)}>
+        Confirm
+      </Button>
+    );
+    notification.open({
+      message: 'Notification Title',
+      description:
+        'A function will be be called after the notification is closed (automatically after the "duration" time of manually).',
+      btn,
+      key,
+      onClose: this.closeNotification,
+    });
+  };
 
   render() {
     const totalCount = this.state.totalCount;
@@ -67,10 +94,11 @@ class App extends React.Component {
       showSizeChanger: true,
       defaultCurrent: 1,
       defaultPageSize: 5,
-      onShowSizeChange: this.onShowSizeChange,
       total: totalCount,
+      pageSizeOptions: [5, 10, 20, 50],
+      onShowSizeChange: this.onShowSizeChange,
       showTotal: this.showTotal,
-      onChange: this.onChange,
+      onChange: this.onChange
     }
     return (
       <div className="App" >
@@ -99,9 +127,13 @@ class App extends React.Component {
                   <span>
                     {item.name}
                   </span>
-                  <DeleteArea id={item.id} onClicked={this.deleteCountAndRefresh.bind(this)} />
+                  <DeleteArea
+                    id={item.id}
+                    onClicked={this.deleteCountAndRefresh.bind(this)}
+                  />
                 </List.Item>}
             />
+
           </Modal>
         </div>
       </div>
@@ -110,6 +142,14 @@ class App extends React.Component {
 }
 
 class DeleteArea extends React.Component {
+
+  constructor(props) {
+    super(props);
+    this.state = {
+      isPreConfirmModalVisible: false,
+      visible: false
+    }
+  }
 
   confirm = () => new Promise(resolve => {
     // setTimeout(() => { resolve() }, 1000);
@@ -124,19 +164,47 @@ class DeleteArea extends React.Component {
     // console.log(data);
     this.props.onClicked();
     message.success("delete " + this.props.id);
+    this.setState({visible : false})
     resolve();
   });
 
+  cancel = () => {
+    this.setState({ visible: false });
+  };
+
   deleteClick = () => {
-    // message.success("delete" + this.props.id);
+    this.showPreModal();
   }
+
+  showPreModal = () => {
+    this.setState({ isPreConfirmModalVisible: true });
+  };
+
+  handlePreOk = () => {
+    this.setState({ isPreConfirmModalVisible: false, visible: true });
+  };
+
+  handlePreCancel = () => {
+    this.setState({ isPreConfirmModalVisible: false });
+  };
 
   render() {
     return (
       < div >
+        <div className='preConfirm'>
+          <Modal title="preConfirm"
+            visible={this.state.isPreConfirmModalVisible}
+            onOk={this.handlePreOk}
+            onCancel={this.handlePreCancel}>
+            <p>preConfirm?</p>
+          </Modal>
+        </div>
         <Popconfirm
           title={"Are you sure to delete this task ? id =" + this.props.id}
+          visible={this.state.visible}
+          // onVisibleChange={this.handleVisibleChange}
           onConfirm={this.confirm}
+          onCancel={this.cancel}
           okText="Yes"
         >
           <Button type='text' value={this.props.id} onClick={this.deleteClick}>delete</Button>
